@@ -1,0 +1,47 @@
+{
+  "risk_score": 33.1,
+  "top_risk_factors": [
+    {
+      "feature": "AMT_ANNUITY",
+      "impact": 0.1035
+    },
+    {
+      "feature": "total_installment_amount",
+      "impact": 0.1015
+    },
+    {
+      "feature": "DAYS_EMPLOYED",
+      "impact": 0.0887
+    },
+    {
+      "feature": "CODE_GENDER_M",
+      "impact": 0.0837
+    },
+    {
+      "feature": "EXT_SOURCE_3",
+      "impact": 0.0787
+    }
+  ],
+  "top_protective_factors": [
+    {
+      "feature": "EXT_SOURCE_2",
+      "impact": -0.25
+    },
+    {
+      "feature": "NAME_EDUCATION_TYPE_Higher education",
+      "impact": -0.1829
+    },
+    {
+      "feature": "AMT_GOODS_PRICE",
+      "impact": -0.1574
+    },
+    {
+      "feature": "cc_max_utilization_ratio",
+      "impact": -0.1452
+    },
+    {
+      "feature": "late_payment_ratio",
+      "impact": -0.1435
+    }
+  ]
+}

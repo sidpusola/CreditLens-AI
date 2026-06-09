@@ -1,0 +1,28 @@
+{
+  "results": {
+    "logistic_regression": {
+      "accuracy": 0.7039,
+      "precision": 0.172,
+      "recall": 0.6993,
+      "f1": 0.276,
+      "roc_auc": 0.7644
+    },
+    "random_forest": {
+      "accuracy": 0.7484,
+      "precision": 0.1808,
+      "recall": 0.5992,
+      "f1": 0.2778,
+      "roc_auc": 0.7463
+    },
+    "xgboost": {
+      "accuracy": 0.7318,
+      "precision": 0.183,
+      "recall": 0.6705,
+      "f1": 0.2876,
+      "roc_auc": 0.7721
+    }
+  },
+  "best_model": "xgboost",
+  "primary_metric": "roc_auc",
+  "tag": "installments"
+}

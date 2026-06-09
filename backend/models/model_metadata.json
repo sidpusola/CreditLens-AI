@@ -1,0 +1,17 @@
+{
+  "model_name": "XGBoost",
+  "model_version": "1.0.0",
+  "roc_auc": 0.7773,
+  "feature_count": 454,
+  "training_date": "2026-06-10",
+  "feature_sources": [
+    "application_train",
+    "bureau",
+    "previous_application",
+    "installments_payments",
+    "credit_card_balance",
+    "POS_CASH_balance"
+  ],
+  "primary_metric": "roc_auc",
+  "notes": "bureau_balance excluded (redundant, regressed AUC)."
+}

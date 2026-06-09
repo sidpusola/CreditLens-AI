@@ -1,0 +1,28 @@
+{
+  "results": {
+    "logistic_regression": {
+      "accuracy": 0.7089,
+      "precision": 0.1745,
+      "recall": 0.6987,
+      "f1": 0.2793,
+      "roc_auc": 0.7719
+    },
+    "random_forest": {
+      "accuracy": 0.7615,
+      "precision": 0.188,
+      "recall": 0.5887,
+      "f1": 0.285,
+      "roc_auc": 0.7506
+    },
+    "xgboost": {
+      "accuracy": 0.738,
+      "precision": 0.1871,
+      "recall": 0.6715,
+      "f1": 0.2927,
+      "roc_auc": 0.7765
+    }
+  },
+  "best_model": "xgboost",
+  "primary_metric": "roc_auc",
+  "tag": "bureau_balance"
+}

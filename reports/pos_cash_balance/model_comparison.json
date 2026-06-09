@@ -1,0 +1,28 @@
+{
+  "results": {
+    "logistic_regression": {
+      "accuracy": 0.709,
+      "precision": 0.1745,
+      "recall": 0.6983,
+      "f1": 0.2792,
+      "roc_auc": 0.7717
+    },
+    "random_forest": {
+      "accuracy": 0.7615,
+      "precision": 0.1886,
+      "recall": 0.5921,
+      "f1": 0.2861,
+      "roc_auc": 0.7522
+    },
+    "xgboost": {
+      "accuracy": 0.738,
+      "precision": 0.1869,
+      "recall": 0.6701,
+      "f1": 0.2923,
+      "roc_auc": 0.7773
+    }
+  },
+  "best_model": "xgboost",
+  "primary_metric": "roc_auc",
+  "tag": "pos_cash"
+}
