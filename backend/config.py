@@ -22,6 +22,13 @@ class Settings(BaseSettings):
     app_version: str = "1.0.0"
     log_level: str = "INFO"
 
+    # Comma-separated allowed CORS origins (the Vite dev server runs on 5173)
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
     # Directory holding the frozen production artifacts
     model_dir: Path = REPO_ROOT / "backend" / "models"
 
