@@ -2,17 +2,29 @@ import { useAssessment } from "../context/AssessmentContext";
 import { riskTheme } from "../utils/format";
 
 export default function HistoryPanel() {
-  const { history, assessment, selectAssessment, clearHistory } = useAssessment();
+  const { history, assessment, selectAssessment, clearHistory, persistenceEnabled } = useAssessment();
 
   if (history.length === 0) return null;
 
   return (
     <div className="card p-4 no-print">
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-1 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-white">History</h3>
         <button onClick={clearHistory} className="text-xs text-slate-500 hover:text-rose-400">
           Clear
         </button>
+      </div>
+      <div className="mb-3">
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+            persistenceEnabled
+              ? "bg-emerald-500/10 text-emerald-400"
+              : "bg-slate-500/10 text-slate-400"
+          }`}
+        >
+          <span className={`h-1.5 w-1.5 rounded-full ${persistenceEnabled ? "bg-emerald-400" : "bg-slate-400"}`} />
+          {persistenceEnabled ? "Cloud synced" : "Local only"}
+        </span>
       </div>
       <ul className="space-y-1.5">
         {history.map((h) => {

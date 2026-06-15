@@ -25,4 +25,21 @@ export async function postExplain(features) {
   return data;
 }
 
+// ---- Supabase-backed persistence (gracefully returns 503 if not configured) ----
+
+export async function postAssessment(features) {
+  const { data } = await api.post("/assessments", { features });
+  return data; // saved DB record (includes id + created_at)
+}
+
+export async function getAssessments(limit = 25) {
+  const { data } = await api.get("/assessments", { params: { limit } });
+  return data; // { count, items: [...] }
+}
+
+export async function getAssessment(id) {
+  const { data } = await api.get(`/assessments/${id}`);
+  return data;
+}
+
 export default api;

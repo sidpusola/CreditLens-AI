@@ -1,7 +1,9 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { getAssessments } from "../api/client";
 
-// Persists assessments to localStorage so the Risk Report page can show history
-// and survive page reloads. The "current" record is the one being viewed.
+// Persists assessments to localStorage (offline fallback) and, when Supabase is
+// configured on the backend, syncs history from the server so it is shared
+// across sessions and devices. The "current" record is the one being viewed.
 const AssessmentContext = createContext(null);
 const STORAGE_KEY = "creditlens.assessments.v1";
 const MAX_HISTORY = 25;
@@ -15,9 +17,30 @@ function loadHistory() {
   }
 }
 
+// Map a Supabase row into the internal assessment record shape.
+export function serverRecordToEntry(row) {
+  return {
+    id: row.id,
+    submittedAt: row.created_at,
+    persisted: true,
+    prediction: {
+      risk_score: row.risk_score,
+      default_probability: row.default_probability,
+      risk_category: row.risk_category,
+    },
+    explanation: {
+      risk_score: row.risk_score,
+      top_risk_factors: row.top_risk_factors || [],
+      top_protective_factors: row.top_protective_factors || [],
+    },
+    features: row.inputs || {},
+  };
+}
+
 export function AssessmentProvider({ children }) {
   const [history, setHistory] = useState(loadHistory);
   const [currentId, setCurrentId] = useState(() => loadHistory()[0]?.id ?? null);
+  const [persistenceEnabled, setPersistenceEnabled] = useState(false);
 
   useEffect(() => {
     try {
@@ -26,6 +49,24 @@ export function AssessmentProvider({ children }) {
       /* ignore quota errors */
     }
   }, [history]);
+
+  // Best-effort sync from Supabase on mount. If persistence is off (503) or the
+  // backend is unreachable, we silently keep the localStorage history.
+  useEffect(() => {
+    let cancelled = false;
+    getAssessments(25)
+      .then((data) => {
+        if (cancelled || !data?.items?.length) return;
+        setPersistenceEnabled(true);
+        setHistory(data.items.map(serverRecordToEntry));
+      })
+      .catch(() => {
+        /* persistence disabled or offline — keep local history */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Add a new assessment, make it current, and keep history bounded.
   const addAssessment = (record) => {
@@ -52,7 +93,7 @@ export function AssessmentProvider({ children }) {
 
   return (
     <AssessmentContext.Provider
-      value={{ assessment, history, addAssessment, selectAssessment, clearHistory }}
+      value={{ assessment, history, addAssessment, selectAssessment, clearHistory, persistenceEnabled }}
     >
       {children}
     </AssessmentContext.Provider>

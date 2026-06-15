@@ -32,3 +32,4 @@ class ModelInfoResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     model_loaded: bool
+    persistence_enabled: bool = False

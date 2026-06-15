@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Repository root (two levels up from this file: backend/config.py -> repo/)
@@ -13,7 +14,9 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(
         env_prefix="CREDITLENS_",
-        env_file=".env",
+        # Load a .env from either the repo root or backend/ (later wins), so it
+        # works no matter where uvicorn is launched from. Real env vars still win.
+        env_file=(str(REPO_ROOT / ".env"), str(REPO_ROOT / "backend" / ".env")),
         extra="ignore",
         protected_namespaces=(),  # allow field names starting with "model_"
     )
@@ -35,6 +38,23 @@ class Settings(BaseSettings):
     # Risk-category thresholds on the 0-100 risk score
     medium_risk_threshold: float = 40.0
     high_risk_threshold: float = 70.0
+
+    # Supabase (optional). Accepts the conventional SUPABASE_* names or the
+    # prefixed CREDITLENS_SUPABASE_* names. Leave blank to disable persistence.
+    supabase_url: str = Field(
+        default="", validation_alias=AliasChoices("SUPABASE_URL", "CREDITLENS_SUPABASE_URL")
+    )
+    supabase_key: str = Field(
+        default="", validation_alias=AliasChoices("SUPABASE_KEY", "CREDITLENS_SUPABASE_KEY")
+    )
+    supabase_table: str = Field(
+        default="assessments",
+        validation_alias=AliasChoices("SUPABASE_TABLE", "CREDITLENS_SUPABASE_TABLE"),
+    )
+
+    @property
+    def supabase_enabled(self) -> bool:
+        return bool(self.supabase_url and self.supabase_key)
 
     @property
     def model_path(self) -> Path:

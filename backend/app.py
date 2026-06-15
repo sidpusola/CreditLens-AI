@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.config import settings
-from backend.routes import explain, health, model_info, predict
+from backend.routes import assessments, explain, health, model_info, predict
 from backend.utils.logging_config import configure_logging
 
 configure_logging(settings.log_level)
@@ -51,6 +51,7 @@ app.include_router(health.router)
 app.include_router(predict.router)
 app.include_router(explain.router)
 app.include_router(model_info.router)
+app.include_router(assessments.router)
 
 
 @app.get("/", tags=["root"])
@@ -60,5 +61,11 @@ def root() -> dict:
         "service": settings.app_name,
         "version": settings.app_version,
         "docs": "/docs",
-        "endpoints": ["/health", "/predict", "/explain", "/model-info"],
+        "endpoints": [
+            "/health",
+            "/predict",
+            "/explain",
+            "/model-info",
+            "/assessments",
+        ],
     }

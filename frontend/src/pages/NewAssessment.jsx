@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { postPredict, postExplain } from "../api/client";
-import { useAssessment } from "../context/AssessmentContext";
+import { postPredict, postExplain, postAssessment } from "../api/client";
+import { useAssessment, serverRecordToEntry } from "../context/AssessmentContext";
 
 // Curated, human-friendly inputs. Anything not provided is imputed by the backend.
 const NUMERIC_FIELDS = [
@@ -75,8 +75,19 @@ export default function NewAssessment() {
     setError(null);
     try {
       const features = buildFeatures();
-      const [prediction, explanation] = await Promise.all([postPredict(features), postExplain(features)]);
-      addAssessment({ prediction, explanation, features });
+      // Prefer the persisted path (scores + saves to Supabase). If persistence is
+      // unavailable for any reason (503 not configured, older backend, offline),
+      // fall back to stateless predict + explain so the app still works.
+      try {
+        const saved = await postAssessment(features);
+        addAssessment({ ...serverRecordToEntry(saved), features });
+      } catch {
+        const [prediction, explanation] = await Promise.all([
+          postPredict(features),
+          postExplain(features),
+        ]);
+        addAssessment({ prediction, explanation, features, persisted: false });
+      }
       navigate("/report");
     } catch (err) {
       setError(err?.response?.data?.detail || err.message);
