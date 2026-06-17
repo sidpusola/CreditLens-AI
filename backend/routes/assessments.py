@@ -2,12 +2,17 @@ from __future__ import annotations
 
 import logging
 
+import datetime as dt
+
 from fastapi import APIRouter, HTTPException, Query
 
 from backend.config import settings
 from backend.schemas.assessment import (
+    DECISIONS,
     AssessmentListResponse,
     AssessmentRecord,
+    CreateAssessmentRequest,
+    DecisionRequest,
     SimilarApplicant,
     SimilarResponse,
 )
@@ -25,8 +30,8 @@ def _confidence(probability: float) -> float:
 
 
 @router.post("/assessments", response_model=AssessmentRecord, status_code=201)
-def create_assessment(request: PredictRequest) -> AssessmentRecord:
-    """Score an applicant, then persist the full assessment to Supabase."""
+def create_assessment(request: CreateAssessmentRequest) -> AssessmentRecord:
+    """Score an applicant, then persist the full assessment (+ case metadata) to Supabase."""
     model = get_model_service()
     supabase = get_supabase_service()
 
@@ -45,6 +50,7 @@ def create_assessment(request: PredictRequest) -> AssessmentRecord:
         "top_risk_factors": explanation["top_risk_factors"],
         "top_protective_factors": explanation["top_protective_factors"],
         "inputs": request.features,
+        "case_meta": request.case.model_dump(exclude_none=True) if request.case else {},
     }
 
     # Embed the applicant for similarity search (only when pgvector is enabled)
@@ -104,6 +110,31 @@ def list_assessments(limit: int = Query(25, ge=1, le=100)) -> AssessmentListResp
         raise HTTPException(status_code=502, detail=f"Could not list assessments: {exc}") from exc
 
     return AssessmentListResponse(count=len(rows), items=[AssessmentRecord(**r) for r in rows])
+
+
+@router.patch("/assessments/{assessment_id}/decision", response_model=AssessmentRecord)
+def record_decision(assessment_id: str, request: DecisionRequest) -> AssessmentRecord:
+    """Record the loan officer's decision on a persisted assessment."""
+    if request.decision not in DECISIONS:
+        raise HTTPException(status_code=422, detail=f"decision must be one of {DECISIONS}")
+
+    supabase = get_supabase_service()
+    fields = {
+        "decision": request.decision,
+        "decision_note": request.note,
+        "decided_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+    }
+    try:
+        updated = supabase.update_assessment(assessment_id, fields)
+    except SupabaseNotConfigured as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("Decision update failed")
+        raise HTTPException(status_code=502, detail=f"Could not record decision: {exc}") from exc
+
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Assessment not found")
+    return AssessmentRecord(**updated)
 
 
 @router.get("/assessments/{assessment_id}", response_model=AssessmentRecord)

@@ -5,6 +5,8 @@ import RiskFactorCard from "../components/RiskFactorCard";
 import ShapWaterfall from "../components/ShapWaterfall";
 import FeatureImportanceChart from "../components/FeatureImportanceChart";
 import DecisionSummary from "../components/DecisionSummary";
+import DecisionActions from "../components/DecisionActions";
+import CaseHeader from "../components/CaseHeader";
 import HistoryPanel from "../components/HistoryPanel";
 import SimilarApplicants from "../components/SimilarApplicants";
 import UnderwritingReport from "../components/UnderwritingReport";
@@ -61,6 +63,12 @@ export default function RiskReport() {
       <div className="grid gap-6 lg:grid-cols-4">
         {/* Main report column */}
         <div className="space-y-6 lg:col-span-3">
+          {/* Case file header — who & what, first */}
+          <CaseHeader caseMeta={assessment.case || {}} submittedAt={assessment.submittedAt} />
+
+          {/* Officer action workflow — the primary call to action */}
+          <DecisionActions assessment={assessment} />
+
           {/* Score + decision */}
           <div className="grid gap-6 md:grid-cols-3">
             <div className="card flex flex-col items-center justify-center p-6">
@@ -90,7 +98,7 @@ export default function RiskReport() {
           </div>
 
           {/* AI underwriting report (RAG + local LLM) */}
-          <UnderwritingReport features={assessment.features || {}} />
+          <UnderwritingReport features={assessment.features || {}} caseMeta={assessment.case || {}} />
 
           {/* Factor lists */}
           <div className="grid gap-6 md:grid-cols-2">

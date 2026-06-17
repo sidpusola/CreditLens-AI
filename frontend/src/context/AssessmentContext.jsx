@@ -1,5 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { getAssessments } from "../api/client";
+import { getAssessments, patchDecision } from "../api/client";
+
+// A server id is a UUID; locally-generated ids are not. Used to decide whether to persist.
+const isServerId = (id) => typeof id === "string" && /^[0-9a-f-]{36}$/i.test(id);
 
 // Persists assessments to localStorage (offline fallback) and, when Supabase is
 // configured on the backend, syncs history from the server so it is shared
@@ -34,6 +37,10 @@ export function serverRecordToEntry(row) {
       top_protective_factors: row.top_protective_factors || [],
     },
     features: row.inputs || {},
+    case: row.case_meta || {},
+    decision: row.decision || null,
+    decision_note: row.decision_note || null,
+    decided_at: row.decided_at || null,
   };
 }
 
@@ -81,6 +88,21 @@ export function AssessmentProvider({ children }) {
 
   const selectAssessment = (id) => setCurrentId(id);
 
+  // Record the officer's decision: update locally immediately, persist to Supabase if possible.
+  const recordDecision = (id, decision, note = null) => {
+    const decidedAt = new Date().toISOString();
+    setHistory((h) =>
+      h.map((a) =>
+        a.id === id ? { ...a, decision, decision_note: note, decided_at: decidedAt } : a
+      )
+    );
+    if (isServerId(id)) {
+      patchDecision(id, decision, note).catch(() => {
+        /* persistence off or offline — local update already applied */
+      });
+    }
+  };
+
   const clearHistory = () => {
     setHistory([]);
     setCurrentId(null);
@@ -93,7 +115,7 @@ export function AssessmentProvider({ children }) {
 
   return (
     <AssessmentContext.Provider
-      value={{ assessment, history, addAssessment, selectAssessment, clearHistory, persistenceEnabled }}
+      value={{ assessment, history, addAssessment, selectAssessment, recordDecision, clearHistory, persistenceEnabled }}
     >
       {children}
     </AssessmentContext.Provider>

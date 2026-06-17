@@ -5,8 +5,7 @@ import logging
 from fastapi import APIRouter, HTTPException, Query
 
 from backend.config import settings
-from backend.schemas.assessment import ReportResponse
-from backend.schemas.prediction import PredictRequest
+from backend.schemas.assessment import CreateAssessmentRequest, ReportResponse
 from backend.services.llm_service import LLMUnavailable, get_llm_service
 from backend.services.model_service import get_model_service
 from backend.services.supabase_service import get_supabase_service
@@ -16,7 +15,7 @@ router = APIRouter(tags=["reports"])
 
 
 @router.post("/report", response_model=ReportResponse)
-def generate_report(request: PredictRequest, similar_count: int = Query(5, ge=0, le=10)) -> ReportResponse:
+def generate_report(request: CreateAssessmentRequest, similar_count: int = Query(5, ge=0, le=10)) -> ReportResponse:
     """
     RAG underwriting report: score the applicant, retrieve similar precedent cases
     (pgvector), and have the local LLM write a grounded narrative.
@@ -40,8 +39,9 @@ def generate_report(request: PredictRequest, similar_count: int = Query(5, ge=0,
         except Exception:
             logger.exception("Similarity retrieval failed; generating report without precedent")
 
+    case = request.case.model_dump(exclude_none=True) if request.case else {}
     try:
-        report = llm.generate_report(prediction, explanation, request.features, similar)
+        report = llm.generate_report(prediction, explanation, request.features, similar, case)
     except LLMUnavailable as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:

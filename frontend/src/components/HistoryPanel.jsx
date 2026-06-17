@@ -1,5 +1,6 @@
 import { useAssessment } from "../context/AssessmentContext";
 import { riskTheme } from "../utils/format";
+import DecisionBadge from "./DecisionBadge";
 
 export default function HistoryPanel() {
   const { history, assessment, selectAssessment, clearHistory, persistenceEnabled } = useAssessment();
@@ -46,9 +47,12 @@ export default function HistoryPanel() {
                     {new Date(h.submittedAt).toLocaleString()}
                   </p>
                 </div>
-                <span className={`shrink-0 text-[10px] font-medium ${theme.text}`}>
-                  {h.prediction.risk_category.replace(" Risk", "")}
-                </span>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <span className={`text-[10px] font-medium ${theme.text}`}>
+                    {h.prediction.risk_category.replace(" Risk", "")}
+                  </span>
+                  <DecisionBadge decision={h.decision} short />
+                </div>
               </button>
             </li>
           );

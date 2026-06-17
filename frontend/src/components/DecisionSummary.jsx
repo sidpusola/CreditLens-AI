@@ -1,5 +1,5 @@
 import { decisionFor } from "../utils/report";
-import { prettyFeature } from "../utils/format";
+import { prettyFeature, isSoftFactor } from "../utils/format";
 
 const TONE = {
   rose: { text: "text-rose-400", bg: "bg-rose-500/10", border: "border-rose-500/30", dot: "bg-rose-400" },
@@ -10,7 +10,9 @@ const TONE = {
 export default function DecisionSummary({ prediction, explanation }) {
   const decision = decisionFor(prediction.risk_category);
   const tone = TONE[decision.tone];
-  const topRisk = explanation.top_risk_factors[0];
+  // Prefer a genuinely interpretable risk driver; skip "absence of a problem" factors
+  const topRisk =
+    explanation.top_risk_factors.find((f) => !isSoftFactor(f.feature)) || null;
   const topProtective = explanation.top_protective_factors[0];
 
   return (
@@ -32,7 +34,7 @@ export default function DecisionSummary({ prediction, explanation }) {
               {prettyFeature(topRisk.feature)} <span className="text-slate-500">(+{topRisk.impact.toFixed(2)})</span>
             </p>
           ) : (
-            <p className="mt-1 text-sm text-slate-500">None</p>
+            <p className="mt-1 text-sm text-emerald-400">None material</p>
           )}
         </div>
         <div className="rounded-xl border border-ink-600 bg-ink-700/50 p-3">

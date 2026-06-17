@@ -40,6 +40,9 @@ function generateSample() {
   const ext = () => (strong ? rand(0.45, 0.85) : rand(0.02, 0.35));
   const credit = round1000(rand(100000, 1800000));
   return {
+    applicant_name: pick(SAMPLE_NAMES),
+    loan_purpose: pick(LOAN_PURPOSES),
+    officer_name: "Officer Demo",
     age: Math.round(rand(21, 65, 0)),
     employmentYears: Math.round(rand(0, 25, 0)),
     CODE_GENDER: pick(["M", "F"]),
@@ -58,13 +61,21 @@ function generateSample() {
   };
 }
 
+const LOAN_PURPOSES = ["Home Improvement", "Car Purchase", "Education", "Medical", "Debt Consolidation", "Business", "Personal"];
+
 const EMPTY = {
+  applicant_name: "",
+  loan_purpose: "Personal",
+  officer_name: "",
   age: "",
   employmentYears: "",
   CODE_GENDER: "M",
   NAME_EDUCATION_TYPE: "Higher education",
   NAME_CONTRACT_TYPE: "Cash loans",
 };
+
+const SAMPLE_NAMES = ["Priya Sharma", "Arjun Mehta", "Sara Khan", "Rohan Gupta", "Ananya Iyer", "Vikram Singh", "Neha Reddy", "Karan Patel"];
+const newApplicantId = () => "APP-" + Math.floor(100000 + Math.random() * 900000);
 
 export default function NewAssessment() {
   const [form, setForm] = useState(EMPTY);
@@ -92,24 +103,34 @@ export default function NewAssessment() {
     return features;
   };
 
+  const buildCase = (features) => ({
+    applicant_id: newApplicantId(),
+    applicant_name: form.applicant_name?.trim() || "Unnamed Applicant",
+    loan_amount: features.AMT_CREDIT ?? null,
+    loan_purpose: form.loan_purpose || null,
+    officer_name: form.officer_name?.trim() || "Unassigned",
+    application_date: new Date().toISOString(),
+  });
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
     try {
       const features = buildFeatures();
+      const caseMeta = buildCase(features);
       // Prefer the persisted path (scores + saves to Supabase). If persistence is
       // unavailable for any reason (503 not configured, older backend, offline),
       // fall back to stateless predict + explain so the app still works.
       try {
-        const saved = await postAssessment(features);
-        addAssessment({ ...serverRecordToEntry(saved), features });
+        const saved = await postAssessment(features, caseMeta);
+        addAssessment({ ...serverRecordToEntry(saved), features, case: { ...caseMeta, ...(saved.case_meta || {}) } });
       } catch {
         const [prediction, explanation] = await Promise.all([
           postPredict(features),
           postExplain(features),
         ]);
-        addAssessment({ prediction, explanation, features, persisted: false });
+        addAssessment({ prediction, explanation, features, case: caseMeta, persisted: false });
       }
       navigate("/report");
     } catch (err) {
@@ -141,9 +162,28 @@ export default function NewAssessment() {
       )}
 
       <form onSubmit={handleSubmit} className="card p-6">
+        {/* Case details */}
+        <h3 className="mb-3 text-sm font-semibold text-accent-soft">Case Details</h3>
+        <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-3">
+          <div className="col-span-2 md:col-span-1">
+            <label className="label">Applicant Name</label>
+            <input className="input" value={form.applicant_name} onChange={(e) => update("applicant_name", e.target.value)} placeholder="e.g. Priya Sharma" />
+          </div>
+          <div>
+            <label className="label">Loan Purpose</label>
+            <select className="input" value={form.loan_purpose} onChange={(e) => update("loan_purpose", e.target.value)}>
+              {LOAN_PURPOSES.map((p) => <option key={p}>{p}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="label">Officer Name</label>
+            <input className="input" value={form.officer_name} onChange={(e) => update("officer_name", e.target.value)} placeholder="e.g. J. Doe" />
+          </div>
+        </div>
+
         <p className="mb-4 text-xs text-slate-500">
           Fill any subset — blank fields are imputed by the model pipeline. Strong predictors are the External Scores
-          and Late Payment Ratio.
+          and Late Payment Ratio. (Loan amount = Credit Amount below.)
         </p>
 
         {/* Applicant profile */}

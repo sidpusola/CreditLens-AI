@@ -84,6 +84,20 @@ class SupabaseService:
         resp.raise_for_status()
         return resp.json()
 
+    def update_assessment(self, assessment_id: str, fields: Dict) -> Optional[Dict]:
+        """Patch columns on an existing assessment row."""
+        self._require()
+        with httpx.Client(timeout=15) as client:
+            resp = client.patch(
+                f"{self._base}/{self.table}",
+                headers={**self._headers, "Prefer": "return=representation"},
+                params={"id": f"eq.{assessment_id}"},
+                json=fields,
+            )
+        resp.raise_for_status()
+        rows = resp.json()
+        return rows[0] if rows else None
+
     def get_assessment(self, assessment_id: str) -> Optional[Dict]:
         self._require()
         with httpx.Client(timeout=15) as client:

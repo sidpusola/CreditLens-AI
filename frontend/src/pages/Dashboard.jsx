@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getHealth, getModelInfo } from "../api/client";
 import StatusPill from "../components/StatusPill";
+import DecisionBadge from "../components/DecisionBadge";
 import { useAssessment } from "../context/AssessmentContext";
 import { riskTheme } from "../utils/format";
 
@@ -136,13 +137,13 @@ export default function Dashboard() {
                         <span className={`text-sm font-bold ${theme.text}`}>{h.prediction.risk_score.toFixed(0)}</span>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-slate-100">
-                          {h.prediction.risk_category}
-                          <span className="ml-2 text-xs font-normal text-slate-500">
-                            {(h.prediction.default_probability * 100).toFixed(1)}% PD
-                          </span>
+                        <p className="flex items-center gap-2 text-sm font-semibold text-slate-100">
+                          <span className="truncate">{h.case?.applicant_name || h.prediction.risk_category}</span>
+                          <DecisionBadge decision={h.decision} short />
                         </p>
-                        <p className="truncate text-[11px] text-slate-500">{new Date(h.submittedAt).toLocaleString()}</p>
+                        <p className="truncate text-[11px] text-slate-500">
+                          {h.prediction.risk_category} · {(h.prediction.default_probability * 100).toFixed(1)}% PD · {new Date(h.submittedAt).toLocaleDateString()}
+                        </p>
                       </div>
                       <svg className="h-4 w-4 shrink-0 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />

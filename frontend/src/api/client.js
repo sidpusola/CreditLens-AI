@@ -27,9 +27,9 @@ export async function postExplain(features) {
 
 // ---- Supabase-backed persistence (gracefully returns 503 if not configured) ----
 
-export async function postAssessment(features) {
-  const { data } = await api.post("/assessments", { features });
-  return data; // saved DB record (includes id + created_at)
+export async function postAssessment(features, caseMeta = null) {
+  const { data } = await api.post("/assessments", { features, case: caseMeta });
+  return data; // saved DB record (includes id + created_at + case_meta)
 }
 
 export async function getAssessments(limit = 25) {
@@ -47,11 +47,16 @@ export async function postSimilar(features, limit = 5) {
   return data; // { count, items: [{ id, risk_score, risk_category, similarity, created_at }] }
 }
 
-export async function postReport(features, similarCount = 5) {
+export async function patchDecision(id, decision, note = null) {
+  const { data } = await api.patch(`/assessments/${id}/decision`, { decision, note });
+  return data;
+}
+
+export async function postReport(features, caseMeta = null, similarCount = 5) {
   // LLM report generation can take a while on local hardware — allow more time.
   const { data } = await api.post(
     "/report",
-    { features },
+    { features, case: caseMeta },
     { params: { similar_count: similarCount }, timeout: 180000 }
   );
   return data; // { report, model, risk_score, risk_category, similar_used }

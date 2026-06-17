@@ -7,6 +7,21 @@ from pydantic import BaseModel, Field
 from backend.schemas.explanation import Factor
 
 
+# Allowed officer decisions
+DECISIONS = ["Approved", "Manual Review", "Rejected", "Documents Requested"]
+
+
+class CaseMeta(BaseModel):
+    """Case-file metadata about the applicant (not model features)."""
+
+    applicant_id: Optional[str] = None
+    applicant_name: Optional[str] = None
+    loan_amount: Optional[float] = None
+    loan_purpose: Optional[str] = None
+    application_date: Optional[str] = None
+    officer_name: Optional[str] = None
+
+
 class AssessmentRecord(BaseModel):
     """A persisted assessment as returned by the database."""
 
@@ -19,6 +34,20 @@ class AssessmentRecord(BaseModel):
     top_risk_factors: List[Factor] = Field(default_factory=list)
     top_protective_factors: List[Factor] = Field(default_factory=list)
     inputs: dict = Field(default_factory=dict)
+    case_meta: dict = Field(default_factory=dict)
+    decision: Optional[str] = None
+    decision_note: Optional[str] = None
+    decided_at: Optional[str] = None
+
+
+class CreateAssessmentRequest(BaseModel):
+    features: dict = Field(default_factory=dict)
+    case: Optional[CaseMeta] = None
+
+
+class DecisionRequest(BaseModel):
+    decision: str = Field(..., description="One of: Approved, Manual Review, Rejected, Documents Requested")
+    note: Optional[str] = Field(None, description="Optional officer note.")
 
 
 class AssessmentListResponse(BaseModel):
