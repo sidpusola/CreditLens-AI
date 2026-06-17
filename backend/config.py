@@ -52,9 +52,30 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("SUPABASE_TABLE", "CREDITLENS_SUPABASE_TABLE"),
     )
 
+    # Turn on only AFTER running backend/db/pgvector.sql. When off, embeddings are
+    # not stored and the /assessments/similar endpoint reports unavailable.
+    enable_vector_search: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("ENABLE_VECTOR_SEARCH", "CREDITLENS_ENABLE_VECTOR_SEARCH"),
+    )
+
+    # Local LLM (Ollama) for RAG-generated underwriting reports
+    llm_base_url: str = Field(
+        default="http://localhost:11434",
+        validation_alias=AliasChoices("LLM_BASE_URL", "CREDITLENS_LLM_BASE_URL"),
+    )
+    llm_model: str = Field(
+        default="qwen3:4b",
+        validation_alias=AliasChoices("LLM_MODEL", "CREDITLENS_LLM_MODEL"),
+    )
+
     @property
     def supabase_enabled(self) -> bool:
         return bool(self.supabase_url and self.supabase_key)
+
+    @property
+    def vector_search_enabled(self) -> bool:
+        return self.supabase_enabled and self.enable_vector_search
 
     @property
     def model_path(self) -> Path:

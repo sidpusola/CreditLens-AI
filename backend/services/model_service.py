@@ -90,6 +90,11 @@ class ModelService:
             "risk_category": self._risk_category(risk_score),
         }
 
+    def embed(self, features: Dict) -> List[float]:
+        """Return the model's preprocessed feature vector for an applicant (for similarity search)."""
+        X = self._build_input_df(features)
+        return self.preprocessor.transform(X)[0].astype(float).tolist()
+
     def explain(self, features: Dict) -> Dict:
         X = self._build_input_df(features)
         # Reuse the shared explanation function with pre-loaded artifacts (no disk reload)

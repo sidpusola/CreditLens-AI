@@ -42,4 +42,19 @@ export async function getAssessment(id) {
   return data;
 }
 
+export async function postSimilar(features, limit = 5) {
+  const { data } = await api.post("/assessments/similar", { features }, { params: { limit } });
+  return data; // { count, items: [{ id, risk_score, risk_category, similarity, created_at }] }
+}
+
+export async function postReport(features, similarCount = 5) {
+  // LLM report generation can take a while on local hardware — allow more time.
+  const { data } = await api.post(
+    "/report",
+    { features },
+    { params: { similar_count: similarCount }, timeout: 180000 }
+  );
+  return data; // { report, model, risk_score, risk_category, similar_used }
+}
+
 export default api;

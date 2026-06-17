@@ -33,3 +33,4 @@ class HealthResponse(BaseModel):
     status: str
     model_loaded: bool
     persistence_enabled: bool = False
+    vector_search_enabled: bool = False

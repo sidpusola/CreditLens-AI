@@ -4,6 +4,7 @@ import logging
 
 from fastapi import APIRouter
 
+from backend.config import settings
 from backend.schemas.explanation import HealthResponse
 from backend.services.model_service import get_model_service
 from backend.services.supabase_service import get_supabase_service
@@ -27,4 +28,5 @@ def health() -> HealthResponse:
         status="ok" if model_loaded else "degraded",
         model_loaded=model_loaded,
         persistence_enabled=persistence_enabled,
+        vector_search_enabled=settings.vector_search_enabled,
     )

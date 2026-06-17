@@ -6,6 +6,8 @@ import ShapWaterfall from "../components/ShapWaterfall";
 import FeatureImportanceChart from "../components/FeatureImportanceChart";
 import DecisionSummary from "../components/DecisionSummary";
 import HistoryPanel from "../components/HistoryPanel";
+import SimilarApplicants from "../components/SimilarApplicants";
+import UnderwritingReport from "../components/UnderwritingReport";
 import { riskTheme } from "../utils/format";
 import { confidenceScore, downloadJSON } from "../utils/report";
 
@@ -87,6 +89,9 @@ export default function RiskReport() {
             />
           </div>
 
+          {/* AI underwriting report (RAG + local LLM) */}
+          <UnderwritingReport features={assessment.features || {}} />
+
           {/* Factor lists */}
           <div className="grid gap-6 md:grid-cols-2">
             <section>
@@ -112,8 +117,9 @@ export default function RiskReport() {
           </div>
         </div>
 
-        {/* History rail */}
-        <div className="lg:col-span-1">
+        {/* Right rail: similar applicants + history */}
+        <div className="space-y-6 lg:col-span-1">
+          <SimilarApplicants features={assessment.features || {}} currentId={assessment.id} />
           <HistoryPanel />
         </div>
       </div>

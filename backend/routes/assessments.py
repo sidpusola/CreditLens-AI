@@ -4,7 +4,13 @@ import logging
 
 from fastapi import APIRouter, HTTPException, Query
 
-from backend.schemas.assessment import AssessmentListResponse, AssessmentRecord
+from backend.config import settings
+from backend.schemas.assessment import (
+    AssessmentListResponse,
+    AssessmentRecord,
+    SimilarApplicant,
+    SimilarResponse,
+)
 from backend.schemas.prediction import PredictRequest
 from backend.services.model_service import get_model_service
 from backend.services.supabase_service import SupabaseNotConfigured, get_supabase_service
@@ -41,8 +47,16 @@ def create_assessment(request: PredictRequest) -> AssessmentRecord:
         "inputs": request.features,
     }
 
+    # Embed the applicant for similarity search (only when pgvector is enabled)
+    embedding = None
+    if settings.vector_search_enabled:
+        try:
+            embedding = model.embed(request.features)
+        except Exception:
+            logger.exception("Embedding failed; saving without it")
+
     try:
-        saved = supabase.save_assessment(record)
+        saved = supabase.save_assessment(record, embedding=embedding)
     except SupabaseNotConfigured as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:
@@ -50,6 +64,31 @@ def create_assessment(request: PredictRequest) -> AssessmentRecord:
         raise HTTPException(status_code=502, detail=f"Could not persist assessment: {exc}") from exc
 
     return AssessmentRecord(**saved)
+
+
+@router.post("/assessments/similar", response_model=SimilarResponse)
+def similar_assessments(
+    request: PredictRequest, limit: int = Query(5, ge=1, le=20)
+) -> SimilarResponse:
+    """Find the most similar historical applicants (pgvector cosine nearest neighbours)."""
+    if not settings.vector_search_enabled:
+        raise HTTPException(
+            status_code=503,
+            detail="Vector search is disabled. Run backend/db/pgvector.sql and set ENABLE_VECTOR_SEARCH=true.",
+        )
+
+    model = get_model_service()
+    supabase = get_supabase_service()
+    try:
+        embedding = model.embed(request.features)
+        rows = supabase.match_assessments(embedding, match_count=limit)
+    except SupabaseNotConfigured as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("Similarity search failed")
+        raise HTTPException(status_code=502, detail=f"Similarity search failed: {exc}") from exc
+
+    return SimilarResponse(count=len(rows), items=[SimilarApplicant(**r) for r in rows])
 
 
 @router.get("/assessments", response_model=AssessmentListResponse)

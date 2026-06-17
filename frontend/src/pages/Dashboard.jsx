@@ -1,14 +1,51 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { getHealth, getModelInfo } from "../api/client";
-import MetricCard from "../components/MetricCard";
 import StatusPill from "../components/StatusPill";
+import { useAssessment } from "../context/AssessmentContext";
+import { riskTheme } from "../utils/format";
+
+function greeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 18) return "Good afternoon";
+  return "Good evening";
+}
+
+const ICONS = {
+  auc: "M3 17l6-6 4 4 8-8M21 7h-4M21 7v4",
+  features: "M4 6h16M4 12h16M4 18h10",
+  sources: "M4 7h16M4 7a2 2 0 002 2h12a2 2 0 002-2M4 7a2 2 0 012-2h12a2 2 0 012 2M8 11v6m4-6v6m4-6v6",
+  model: "M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 7h10v10H7z",
+};
+
+function Kpi({ label, value, sub, icon, glow }) {
+  return (
+    <div className="card relative overflow-hidden p-5">
+      <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${glow}`} />
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</p>
+          <p className="mt-2 text-3xl font-bold text-white">{value}</p>
+          {sub && <p className="mt-1 text-xs text-slate-500">{sub}</p>}
+        </div>
+        <div className="grid h-10 w-10 place-items-center rounded-xl bg-ink-700 text-accent-soft">
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+            <path strokeLinecap="round" strokeLinejoin="round" d={icon} />
+          </svg>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const [health, setHealth] = useState(null);
   const [info, setInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { history, selectAssessment } = useAssessment();
+  const navigate = useNavigate();
 
   useEffect(() => {
     Promise.all([getHealth(), getModelInfo()])
@@ -20,63 +57,139 @@ export default function Dashboard() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Portfolio risk mix from saved assessments
+  const mix = { "High Risk": 0, "Medium Risk": 0, "Low Risk": 0 };
+  history.forEach((h) => {
+    mix[h.prediction.risk_category] = (mix[h.prediction.risk_category] || 0) + 1;
+  });
+  const total = history.length || 1;
+  const openReport = (id) => {
+    selectAssessment(id);
+    navigate("/report");
+  };
+
   return (
-    <div>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-          <p className="text-sm text-slate-400">Loan default risk intelligence overview</p>
+    <div className="space-y-6">
+      {/* Hero */}
+      <div className="relative overflow-hidden rounded-2xl border border-ink-600/60 bg-gradient-to-br from-accent/25 via-ink-800 to-ink-800 p-7">
+        <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-accent/20 blur-3xl" />
+        <div className="relative flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-sm text-accent-soft">{greeting()}, Underwriter</p>
+            <h1 className="mt-1 text-3xl font-extrabold text-white">Underwriting Command Center</h1>
+            <p className="mt-1 max-w-xl text-sm text-slate-300">
+              Score applicants, explain every decision with SHAP, surface comparable precedent, and
+              generate AI underwriting reports — all in one place.
+            </p>
+            <div className="mt-4 flex gap-2">
+              <Link to="/assess" className="btn-primary">New Assessment</Link>
+              <Link
+                to="/model"
+                className="inline-flex items-center rounded-xl border border-ink-600 bg-ink-800/60 px-4 py-2.5 text-sm font-semibold text-slate-200 hover:bg-ink-700"
+              >
+                Model Insights
+              </Link>
+            </div>
+          </div>
+          <StatusPill ok={health?.model_loaded} loading={loading} labelOk="System Online" labelBad="API Offline" />
         </div>
-        <StatusPill ok={health?.model_loaded} loading={loading} labelOk="API Online" labelBad="API Offline" />
       </div>
 
       {error && (
-        <div className="card mb-6 border-rose-500/30 bg-rose-500/5 p-4 text-sm text-rose-300">
+        <div className="card border-rose-500/30 bg-rose-500/5 p-4 text-sm text-rose-300">
           Could not reach the backend: {error}. Make sure the FastAPI server is running on port 8000.
         </div>
       )}
 
+      {/* KPI cards */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <MetricCard
-          label="Model ROC-AUC"
-          value={info ? info.roc_auc.toFixed(4) : "—"}
-          sub="Primary metric"
-          accent="text-accent-soft"
-        />
-        <MetricCard label="Features" value={info?.feature_count ?? "—"} sub="After encoding" />
-        <MetricCard label="Data Sources" value={info?.feature_sources?.length ?? "—"} sub="Merged tables" />
-        <MetricCard label="Model" value={info?.model_name ?? "—"} sub={info?.training_date ?? ""} />
+        <Kpi label="Model ROC-AUC" value={info ? info.roc_auc.toFixed(4) : "—"} sub="Primary metric" icon={ICONS.auc} glow="from-indigo-500 to-violet-500" />
+        <Kpi label="Features" value={info?.feature_count ?? "—"} sub="After encoding" icon={ICONS.features} glow="from-sky-500 to-cyan-500" />
+        <Kpi label="Data Sources" value={info?.feature_sources?.length ?? "—"} sub="Merged tables" icon={ICONS.sources} glow="from-emerald-500 to-teal-500" />
+        <Kpi label="Assessments" value={history.length} sub="Saved to date" icon={ICONS.model} glow="from-amber-500 to-orange-500" />
       </div>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
-        <Link to="/assess" className="card group p-6 transition hover:border-accent/50">
-          <div className="mb-3 grid h-11 w-11 place-items-center rounded-xl bg-accent/15 text-accent-soft">
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Recent assessments */}
+        <div className="card p-6 lg:col-span-2">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-white">Recent Assessments</h3>
+            <Link to="/assess" className="text-xs font-medium text-accent-soft hover:underline">+ New</Link>
           </div>
-          <h3 className="text-lg font-semibold text-white">New Assessment</h3>
-          <p className="mt-1 text-sm text-slate-400">
-            Enter applicant details and get an instant default-risk score with SHAP explanation.
-          </p>
-        </Link>
 
-        <Link to="/model" className="card group p-6 transition hover:border-accent/50">
-          <div className="mb-3 grid h-11 w-11 place-items-center rounded-xl bg-accent/15 text-accent-soft">
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M11 3.05V11h7.95A8 8 0 1011 3.05z" />
-            </svg>
-          </div>
-          <h3 className="text-lg font-semibold text-white">Model Insights</h3>
-          <p className="mt-1 text-sm text-slate-400">
-            Inspect the production model: metrics, feature sources, and training metadata.
-          </p>
-        </Link>
+          {history.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-ink-600 p-8 text-center">
+              <p className="text-sm text-slate-400">No assessments yet.</p>
+              <Link to="/assess" className="btn-primary mt-4">Run your first assessment</Link>
+            </div>
+          ) : (
+            <ul className="divide-y divide-ink-700/60">
+              {history.slice(0, 6).map((h) => {
+                const theme = riskTheme(h.prediction.risk_category);
+                return (
+                  <li key={h.id}>
+                    <button
+                      onClick={() => openReport(h.id)}
+                      className="flex w-full items-center gap-4 py-3 text-left transition hover:opacity-80"
+                    >
+                      <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${theme.bg}`}>
+                        <span className={`text-sm font-bold ${theme.text}`}>{h.prediction.risk_score.toFixed(0)}</span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-slate-100">
+                          {h.prediction.risk_category}
+                          <span className="ml-2 text-xs font-normal text-slate-500">
+                            {(h.prediction.default_probability * 100).toFixed(1)}% PD
+                          </span>
+                        </p>
+                        <p className="truncate text-[11px] text-slate-500">{new Date(h.submittedAt).toLocaleString()}</p>
+                      </div>
+                      <svg className="h-4 w-4 shrink-0 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+
+        {/* Portfolio risk mix */}
+        <div className="card p-6">
+          <h3 className="mb-4 text-sm font-semibold text-white">Portfolio Risk Mix</h3>
+          {history.length === 0 ? (
+            <p className="text-sm text-slate-500">Run assessments to see your portfolio breakdown.</p>
+          ) : (
+            <>
+              <div className="mb-4 flex h-3 overflow-hidden rounded-full bg-ink-700">
+                <div className="bg-emerald-500" style={{ width: `${(mix["Low Risk"] / total) * 100}%` }} />
+                <div className="bg-amber-500" style={{ width: `${(mix["Medium Risk"] / total) * 100}%` }} />
+                <div className="bg-rose-500" style={{ width: `${(mix["High Risk"] / total) * 100}%` }} />
+              </div>
+              <ul className="space-y-2 text-sm">
+                {[
+                  ["Low Risk", "bg-emerald-400", "text-emerald-400"],
+                  ["Medium Risk", "bg-amber-400", "text-amber-400"],
+                  ["High Risk", "bg-rose-400", "text-rose-400"],
+                ].map(([cat, dot, txt]) => (
+                  <li key={cat} className="flex items-center justify-between">
+                    <span className="flex items-center gap-2 text-slate-300">
+                      <span className={`h-2 w-2 rounded-full ${dot}`} /> {cat}
+                    </span>
+                    <span className={`font-semibold ${txt}`}>{mix[cat]}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
       </div>
 
+      {/* Feature sources */}
       {info && (
-        <div className="card mt-6 p-6">
-          <h3 className="mb-3 text-sm font-semibold text-white">Feature Sources</h3>
+        <div className="card p-6">
+          <h3 className="mb-3 text-sm font-semibold text-white">Data Sources Powering the Model</h3>
           <div className="flex flex-wrap gap-2">
             {info.feature_sources.map((s) => (
               <span key={s} className="rounded-lg border border-ink-600 bg-ink-700 px-3 py-1 text-xs text-slate-300">

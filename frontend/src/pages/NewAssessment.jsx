@@ -17,23 +17,46 @@ const NUMERIC_FIELDS = [
   { key: "cc_high_utilization_ratio", label: "High Card Utilization", min: 0, max: 1, step: 0.01, hint: "0–1" },
 ];
 
-const SAMPLE = {
-  age: 34,
-  employmentYears: 3,
-  CODE_GENDER: "M",
-  NAME_EDUCATION_TYPE: "Secondary / secondary special",
-  NAME_CONTRACT_TYPE: "Cash loans",
-  EXT_SOURCE_1: 0.08,
-  EXT_SOURCE_2: 0.12,
-  EXT_SOURCE_3: 0.1,
-  AMT_CREDIT: 900000,
-  AMT_ANNUITY: 45000,
-  AMT_GOODS_PRICE: 850000,
-  late_payment_ratio: 0.55,
-  bureau_debt_to_credit: 0.8,
-  prev_refusal_ratio: 0.4,
-  cc_high_utilization_ratio: 0.7,
+const EDUCATION_OPTIONS = [
+  "Higher education",
+  "Secondary / secondary special",
+  "Incomplete higher",
+  "Lower secondary",
+  "Academic degree",
+];
+
+const rand = (min, max, decimals = 2) => {
+  const v = min + Math.random() * (max - min);
+  const f = 10 ** decimals;
+  return Math.round(v * f) / f;
 };
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const round1000 = (v) => Math.round(v / 1000) * 1000;
+
+// Generate a fresh, realistic applicant. Profiles are randomly skewed toward
+// "strong" or "weak" so each click can yield a different risk outcome.
+function generateSample() {
+  const strong = Math.random() > 0.5;
+  const ext = () => (strong ? rand(0.45, 0.85) : rand(0.02, 0.35));
+  const credit = round1000(rand(100000, 1800000));
+  return {
+    age: Math.round(rand(21, 65, 0)),
+    employmentYears: Math.round(rand(0, 25, 0)),
+    CODE_GENDER: pick(["M", "F"]),
+    NAME_EDUCATION_TYPE: pick(EDUCATION_OPTIONS),
+    NAME_CONTRACT_TYPE: pick(["Cash loans", "Revolving loans"]),
+    EXT_SOURCE_1: ext(),
+    EXT_SOURCE_2: ext(),
+    EXT_SOURCE_3: ext(),
+    AMT_CREDIT: credit,
+    AMT_ANNUITY: round1000(credit / rand(15, 30)),
+    AMT_GOODS_PRICE: round1000(credit * rand(0.85, 1.0)),
+    late_payment_ratio: strong ? rand(0, 0.15) : rand(0.3, 0.9),
+    bureau_debt_to_credit: strong ? rand(0, 0.4) : rand(0.5, 1.4),
+    prev_refusal_ratio: strong ? rand(0, 0.2) : rand(0.3, 0.8),
+    cc_high_utilization_ratio: strong ? rand(0, 0.3) : rand(0.5, 1.0),
+  };
+}
 
 const EMPTY = {
   age: "",
@@ -104,7 +127,7 @@ export default function NewAssessment() {
           <p className="text-sm text-slate-400">Score an applicant's probability of default</p>
         </div>
         <div className="flex gap-2">
-          <button type="button" onClick={() => setForm(SAMPLE)} className="rounded-xl border border-ink-600 bg-ink-700 px-3 py-2 text-sm font-medium text-slate-300 hover:bg-ink-600">
+          <button type="button" onClick={() => setForm(generateSample())} className="rounded-xl border border-ink-600 bg-ink-700 px-3 py-2 text-sm font-medium text-slate-300 hover:bg-ink-600">
             Load sample
           </button>
           <button type="button" onClick={() => setForm(EMPTY)} className="rounded-xl border border-ink-600 bg-ink-700 px-3 py-2 text-sm font-medium text-slate-300 hover:bg-ink-600">
