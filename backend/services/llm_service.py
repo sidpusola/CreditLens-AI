@@ -46,6 +46,9 @@ _LABELS = {
     "AMT_ANNUITY": "loan annuity",
     "AMT_GOODS_PRICE": "goods price",
     "AMT_INCOME_TOTAL": "total income",
+    "DAYS_BIRTH": "age",
+    "DAYS_EMPLOYED": "employment history",
+    "DAYS_ID_PUBLISH": "ID recency",
     "OWN_CAR_AGE": "car age",
     "DEF_60_CNT_SOCIAL_CIRCLE": "social-circle delinquency (60d)",
     "DEF_30_CNT_SOCIAL_CIRCLE": "social-circle delinquency (30d)",
@@ -128,6 +131,19 @@ def humanize(name: str) -> str:
             return f"no {label}" if val == 0 else f"{label}: {_fmt_num(val)}"
         return f"{label} = {_fmt_num(val)}"
     return name.replace("_", " ").lower()
+
+
+def feature_base(name: str) -> str:
+    """Collapse a preprocessor feature name to its base column (one-hots -> column)."""
+    if name in _LABELS:
+        return name
+    for base in _CAT_KEYS:
+        if name == base or name.startswith(base + "_"):
+            return base
+    m = re.match(r"^(.*)_(\d+(?:\.\d+)?)$", name)
+    if m:
+        return m.group(1)
+    return name
 
 
 def _is_soft_factor(feature: str) -> bool:
@@ -231,18 +247,11 @@ class LLMUnavailable(RuntimeError):
 
 class LLMService:
     def __init__(self) -> None:
+        self.provider = settings.llm_provider.lower()
         self.base_url = settings.llm_base_url.rstrip("/")
         self.model = settings.llm_model
 
-    def generate_report(
-        self,
-        prediction: Dict,
-        explanation: Dict,
-        features: Dict,
-        similar: List[Dict],
-        case: Optional[Dict] = None,
-    ) -> str:
-        prompt = build_prompt(prediction, explanation, features, similar, case)
+    def _call_ollama(self, prompt: str) -> str:
         payload = {
             "model": self.model,
             "messages": [
@@ -259,12 +268,47 @@ class LLMService:
             resp.raise_for_status()
         except httpx.HTTPError as exc:
             raise LLMUnavailable(
-                f"Could not reach the LLM at {self.base_url} (model {self.model}). "
-                "Is Ollama running and the model pulled?"
+                f"Could not reach Ollama at {self.base_url} (model {self.model}). Is it running?"
             ) from exc
+        return resp.json().get("message", {}).get("content", "")
 
-        content = resp.json().get("message", {}).get("content", "").strip()
-        # Qwen3 is a reasoning model — strip any chain-of-thought.
+    def _call_groq(self, prompt: str) -> str:
+        if not settings.groq_api_key:
+            raise LLMUnavailable("GROQ_API_KEY is not set.")
+        payload = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
+            "temperature": 0.45,
+            "stream": False,
+        }
+        headers = {"Authorization": f"Bearer {settings.groq_api_key}"}
+        try:
+            with httpx.Client(timeout=60) as client:
+                resp = client.post(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    json=payload,
+                    headers=headers,
+                )
+            resp.raise_for_status()
+        except httpx.HTTPError as exc:
+            detail = getattr(getattr(exc, "response", None), "text", "")
+            raise LLMUnavailable(f"Groq request failed (model {self.model}). {detail[:160]}") from exc
+        return resp.json()["choices"][0]["message"]["content"]
+
+    def generate_report(
+        self,
+        prediction: Dict,
+        explanation: Dict,
+        features: Dict,
+        similar: List[Dict],
+        case: Optional[Dict] = None,
+    ) -> str:
+        prompt = build_prompt(prediction, explanation, features, similar, case)
+        content = (self._call_groq(prompt) if self.provider == "groq" else self._call_ollama(prompt)).strip()
+        # Strip any chain-of-thought (Qwen3 emits <think>…</think>; no-op otherwise).
         content = re.sub(r"^.*?</think>", "", content, flags=re.DOTALL)
         content = re.sub(r"</?think>", "", content).strip()
         return content

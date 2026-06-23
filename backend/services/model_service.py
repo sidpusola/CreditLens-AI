@@ -95,6 +95,41 @@ class ModelService:
         X = self._build_input_df(features)
         return self.preprocessor.transform(X)[0].astype(float).tolist()
 
+    def similarity_drivers(
+        self, query_emb: List[float], other_emb: List[float], top_n: int = 3
+    ) -> List[str]:
+        """
+        Which features most drove the cosine similarity between two applicants.
+        Per-dimension contribution to the dot product (q_i * m_i), aggregated to base
+        features, ranked. Returns human-readable base-feature names.
+        """
+        import numpy as np
+
+        from backend.services.llm_service import feature_base, humanize
+
+        q = np.asarray(query_emb, dtype=float)
+        m = np.asarray(other_emb, dtype=float)
+        n = min(len(q), len(m), len(self.feature_names))
+        if n == 0:
+            return []
+        contrib = q[:n] * m[:n]
+        agg: Dict[str, float] = {}
+        for i in range(n):
+            base = feature_base(self.feature_names[i])
+            agg[base] = agg.get(base, 0.0) + float(contrib[i])
+        ranked = sorted(agg.items(), key=lambda kv: kv[1], reverse=True)
+        drivers, seen = [], set()
+        for base, score in ranked:
+            if score <= 0:
+                break
+            label = humanize(base)
+            if label not in seen:
+                seen.add(label)
+                drivers.append(label)
+            if len(drivers) >= top_n:
+                break
+        return drivers
+
     def explain(self, features: Dict) -> Dict:
         X = self._build_input_df(features)
         # Reuse the shared explanation function with pre-loaded artifacts (no disk reload)

@@ -9,10 +9,13 @@ create extension if not exists vector;
 alter table public.assessments
     add column if not exists embedding vector(454);
 
--- 3. Approximate-nearest-neighbour index (cosine). Safe to create with few rows;
---    Postgres falls back to an exact scan until there is enough data.
-create index if not exists assessments_embedding_idx
-    on public.assessments using ivfflat (embedding vector_cosine_ops) with (lists = 100);
+-- 3. NO approximate index at this scale.
+--    An ivfflat index built before data exists has useless centroids and silently
+--    returns 0 rows for many queries on small tables. Exact (sequential) search is
+--    fast and always correct for up to tens of thousands of rows, which is plenty here.
+--    If you previously created one, drop it:
+--        DROP INDEX IF EXISTS assessments_embedding_idx;
+--    (Only add an HNSW/ivfflat index once you have many thousands of rows, built AFTER seeding.)
 
 -- 4. Similarity search function, callable via Supabase RPC.
 --    Returns the closest historical assessments by cosine similarity.

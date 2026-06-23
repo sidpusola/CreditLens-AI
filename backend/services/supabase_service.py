@@ -61,6 +61,20 @@ class SupabaseService:
         rows = resp.json()
         return rows[0] if isinstance(rows, list) and rows else rows
 
+    def get_rows_by_ids(self, ids: List[str]) -> Dict[str, Dict]:
+        """Fetch full rows (all columns) for the given ids, keyed by id. Best-effort."""
+        self._require()
+        if not ids:
+            return {}
+        with httpx.Client(timeout=15) as client:
+            resp = client.get(
+                f"{self._base}/{self.table}",
+                headers=self._headers,
+                params={"select": "*", "id": f"in.({','.join(ids)})"},
+            )
+        resp.raise_for_status()
+        return {r["id"]: r for r in resp.json()}
+
     def match_assessments(self, embedding: List[float], match_count: int = 5) -> List[Dict]:
         """Find the most similar historical assessments via the match_assessments RPC."""
         self._require()

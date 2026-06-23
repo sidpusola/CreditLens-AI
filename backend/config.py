@@ -59,7 +59,12 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("ENABLE_VECTOR_SEARCH", "CREDITLENS_ENABLE_VECTOR_SEARCH"),
     )
 
-    # Local LLM (Ollama) for RAG-generated underwriting reports
+    # LLM for RAG-generated underwriting reports.
+    # provider: "ollama" (local) or "groq" (hosted, OpenAI-compatible) for cloud demos.
+    llm_provider: str = Field(
+        default="ollama",
+        validation_alias=AliasChoices("LLM_PROVIDER", "CREDITLENS_LLM_PROVIDER"),
+    )
     llm_base_url: str = Field(
         default="http://localhost:11434",
         validation_alias=AliasChoices("LLM_BASE_URL", "CREDITLENS_LLM_BASE_URL"),
@@ -67,6 +72,9 @@ class Settings(BaseSettings):
     llm_model: str = Field(
         default="qwen3:4b",
         validation_alias=AliasChoices("LLM_MODEL", "CREDITLENS_LLM_MODEL"),
+    )
+    groq_api_key: str = Field(
+        default="", validation_alias=AliasChoices("GROQ_API_KEY", "CREDITLENS_GROQ_API_KEY")
     )
 
     @property

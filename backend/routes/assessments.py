@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 
 import datetime as dt
@@ -94,7 +95,41 @@ def similar_assessments(
         logger.exception("Similarity search failed")
         raise HTTPException(status_code=502, detail=f"Similarity search failed: {exc}") from exc
 
-    return SimilarResponse(count=len(rows), items=[SimilarApplicant(**r) for r in rows])
+    # Enrich each match: case id, decision, outcome (if columns exist) + similarity drivers
+    details: dict = {}
+    try:
+        details = supabase.get_rows_by_ids([r["id"] for r in rows])
+    except Exception:
+        logger.exception("Could not fetch match details; returning basic similarity")
+
+    items = []
+    for r in rows:
+        d = details.get(r["id"], {})
+        drivers: list = []
+        emb = d.get("embedding")
+        if emb is not None:
+            try:
+                other = json.loads(emb) if isinstance(emb, str) else emb
+                drivers = model.similarity_drivers(embedding, other)
+            except Exception:
+                pass
+        case_meta = d.get("case_meta") or {}
+        items.append(
+            SimilarApplicant(
+                id=r["id"],
+                created_at=r.get("created_at"),
+                risk_score=r["risk_score"],
+                default_probability=r["default_probability"],
+                risk_category=r["risk_category"],
+                similarity=r["similarity"],
+                case_id=case_meta.get("applicant_id"),
+                decision=d.get("decision"),
+                outcome=d.get("outcome"),
+                similarity_drivers=drivers,
+            )
+        )
+
+    return SimilarResponse(count=len(items), items=items)
 
 
 @router.get("/assessments", response_model=AssessmentListResponse)

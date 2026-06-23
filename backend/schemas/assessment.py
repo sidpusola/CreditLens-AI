@@ -62,6 +62,10 @@ class SimilarApplicant(BaseModel):
     default_probability: float
     risk_category: str
     similarity: float = Field(..., description="Cosine similarity (1.0 = identical).")
+    case_id: Optional[str] = None
+    decision: Optional[str] = None
+    outcome: Optional[str] = Field(None, description="Actual repayment outcome if known (Defaulted/Repaid).")
+    similarity_drivers: List[str] = Field(default_factory=list)
 
 
 class SimilarResponse(BaseModel):

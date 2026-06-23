@@ -7,9 +7,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import joblib
-import matplotlib
-matplotlib.use("Agg")  # non-interactive backend — must be set before pyplot import
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import shap
@@ -151,6 +148,12 @@ def plot_summary_bar(
     output_path: Path,
     top_n: int = TOP_FEATURES,
 ) -> None:
+    # Lazy import: matplotlib is only needed for offline plotting, not for serving.
+    import matplotlib
+
+    matplotlib.use("Agg")  # non-interactive backend — must be set before pyplot import
+    import matplotlib.pyplot as plt
+
     output_path.parent.mkdir(parents=True, exist_ok=True)
     plt.figure(figsize=(10, 8))
     shap.summary_plot(
