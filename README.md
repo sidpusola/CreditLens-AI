@@ -8,7 +8,9 @@ End-to-end credit-risk platform that **scores** loan-default risk, **explains** 
 <!-- ![Dashboard](docs/dashboard.png) -->
 <!-- ![Risk Report](docs/risk-report.png) -->
 
-**Live demo:** _add your Vercel URL here_ · **API docs:** _add your Render URL_/docs
+**🌐 Live demo:** [credit-lens-ai-two.vercel.app](https://credit-lens-ai-two.vercel.app) · **API docs:** [creditlens-ai-vaun.onrender.com/docs](https://creditlens-ai-vaun.onrender.com/docs)
+
+> _Note: the API is on a free tier that sleeps after ~15 min idle — the first request may take ~30–60s to wake up._
 
 ---
 
