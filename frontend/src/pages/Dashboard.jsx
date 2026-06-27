@@ -64,6 +64,38 @@ export default function Dashboard() {
     mix[h.prediction.risk_category] = (mix[h.prediction.risk_category] || 0) + 1;
   });
   const total = history.length || 1;
+
+  // Operational stats from the assessment history
+  const todayStr = new Date().toDateString();
+  const todays = history.filter((h) => new Date(h.submittedAt).toDateString() === todayStr).length;
+  const avgRisk = history.length
+    ? (history.reduce((s, h) => s + h.prediction.risk_score, 0) / history.length).toFixed(1)
+    : "—";
+  const approved = history.filter((h) => h.decision === "Approved").length;
+  const rejected = history.filter((h) => h.decision === "Rejected").length;
+  const pending = history.filter((h) => !h.decision || h.decision === "Manual Review").length;
+  const decided = history.filter((h) => h.decided_at && h.submittedAt);
+  const avgProcMs = decided.length
+    ? decided.reduce((s, h) => s + (new Date(h.decided_at) - new Date(h.submittedAt)), 0) / decided.length
+    : null;
+  const avgProc =
+    avgProcMs == null
+      ? "—"
+      : avgProcMs < 60000
+      ? `${Math.round(avgProcMs / 1000)}s`
+      : avgProcMs < 3600000
+      ? `${Math.round(avgProcMs / 60000)}m`
+      : `${(avgProcMs / 3600000).toFixed(1)}h`;
+
+  const ops = [
+    { label: "Today's Applications", value: todays, tone: "text-white" },
+    { label: "Average Risk", value: avgRisk, tone: "text-accent-soft" },
+    { label: "Approved", value: approved, tone: "text-emerald-400" },
+    { label: "Pending Review", value: pending, tone: "text-amber-400" },
+    { label: "Rejected", value: rejected, tone: "text-rose-400" },
+    { label: "Avg Processing", value: avgProc, tone: "text-white" },
+  ];
+
   const openReport = (id) => {
     selectAssessment(id);
     navigate("/report");
@@ -102,7 +134,20 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* KPI cards */}
+      {/* Operational stats */}
+      <div>
+        <h3 className="mb-3 text-sm font-semibold text-white">Today's Activity</h3>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {ops.map((s) => (
+            <div key={s.label} className="card p-4">
+              <p className="text-[11px] uppercase tracking-wide text-slate-500">{s.label}</p>
+              <p className={`mt-1.5 text-2xl font-bold ${s.tone}`}>{s.value}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Model KPI cards */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Kpi label="Model ROC-AUC" value={info ? info.roc_auc.toFixed(4) : "—"} sub="Primary metric" icon={ICONS.auc} glow="from-indigo-500 to-violet-500" />
         <Kpi label="Features" value={info?.feature_count ?? "—"} sub="After encoding" icon={ICONS.features} glow="from-sky-500 to-cyan-500" />

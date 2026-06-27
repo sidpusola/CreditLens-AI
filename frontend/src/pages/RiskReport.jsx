@@ -64,7 +64,7 @@ export default function RiskReport() {
         {/* Main report column */}
         <div className="space-y-6 lg:col-span-3">
           {/* Case file header — who & what, first */}
-          <CaseHeader caseMeta={assessment.case || {}} submittedAt={assessment.submittedAt} />
+          <CaseHeader caseMeta={assessment.case || {}} features={assessment.features || {}} submittedAt={assessment.submittedAt} />
 
           {/* Officer action workflow — the primary call to action */}
           <DecisionActions assessment={assessment} />
