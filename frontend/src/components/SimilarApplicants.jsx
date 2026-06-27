@@ -45,9 +45,12 @@ export default function SimilarApplicants({ features, currentId }) {
 
   if (unavailable) return null;
 
-  // How many of the resolved neighbours defaulted — the headline signal.
+  // Headline signal: report the majority outcome with a matching count.
   const resolved = (items || []).filter((it) => it.outcome);
   const defaults = resolved.filter((it) => /default/i.test(it.outcome)).length;
+  const repaid = resolved.length - defaults;
+  const majorityDefaulted = defaults >= repaid;
+  const headlineCount = majorityDefaulted ? defaults : repaid;
 
   return (
     <div className="card p-5">
@@ -55,9 +58,9 @@ export default function SimilarApplicants({ features, currentId }) {
       <p className="mb-3 text-xs text-slate-500">Nearest precedents by model feature similarity (pgvector cosine).</p>
 
       {resolved.length > 0 && (
-        <div className={`mb-4 rounded-xl border p-3 text-sm ${defaults / resolved.length >= 0.5 ? "border-rose-500/30 bg-rose-500/10 text-rose-300" : "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"}`}>
-          <span className="font-bold">{defaults} of {resolved.length}</span> similar resolved cases{" "}
-          {defaults / resolved.length >= 0.5 ? "defaulted" : "were repaid"}.
+        <div className={`mb-4 rounded-xl border p-3 text-sm ${majorityDefaulted ? "border-rose-500/30 bg-rose-500/10 text-rose-300" : "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"}`}>
+          <span className="font-bold">{headlineCount} of {resolved.length}</span> similar resolved cases{" "}
+          {majorityDefaulted ? "defaulted" : "were repaid"}.
         </div>
       )}
 
