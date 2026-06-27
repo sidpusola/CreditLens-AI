@@ -4,7 +4,7 @@ import RiskGauge from "../components/RiskGauge";
 import RiskFactorCard from "../components/RiskFactorCard";
 import ShapWaterfall from "../components/ShapWaterfall";
 import FeatureImportanceChart from "../components/FeatureImportanceChart";
-import DecisionSummary from "../components/DecisionSummary";
+import RecommendationCard from "../components/RecommendationCard";
 import DecisionActions from "../components/DecisionActions";
 import CaseHeader from "../components/CaseHeader";
 import HistoryPanel from "../components/HistoryPanel";
@@ -81,7 +81,7 @@ export default function RiskReport() {
               </div>
             </div>
             <div className="md:col-span-2">
-              <DecisionSummary prediction={prediction} explanation={explanation} />
+              <RecommendationCard prediction={prediction} explanation={explanation} />
             </div>
           </div>
 
