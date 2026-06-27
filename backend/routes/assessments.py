@@ -88,22 +88,27 @@ def similar_assessments(
     supabase = get_supabase_service()
     try:
         embedding = model.embed(request.features)
-        rows = supabase.match_assessments(embedding, match_count=limit)
+        # Over-fetch so we can keep only resolved precedents (those with a known outcome)
+        # and still return `limit` of them, ranked by similarity.
+        candidates = supabase.match_assessments(embedding, match_count=max(limit * 6, 40))
     except SupabaseNotConfigured as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:
         logger.exception("Similarity search failed")
         raise HTTPException(status_code=502, detail=f"Similarity search failed: {exc}") from exc
 
-    # Enrich each match: case id, decision, outcome (if columns exist) + similarity drivers
     details: dict = {}
     try:
-        details = supabase.get_rows_by_ids([r["id"] for r in rows])
+        details = supabase.get_rows_by_ids([r["id"] for r in candidates])
     except Exception:
         logger.exception("Could not fetch match details; returning basic similarity")
 
+    # Prefer resolved precedents (with an outcome); fall back to any matches if none exist yet.
+    resolved = [r for r in candidates if (details.get(r["id"], {}).get("outcome"))]
+    chosen = resolved if resolved else candidates
+
     items = []
-    for r in rows:
+    for r in chosen[:limit]:
         d = details.get(r["id"], {})
         drivers: list = []
         emb = d.get("embedding")
