@@ -45,6 +45,7 @@ export default function Dashboard() {
   const [info, setInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [query, setQuery] = useState("");
   const { history, selectAssessment } = useAssessment();
   const navigate = useNavigate();
 
@@ -101,6 +102,17 @@ export default function Dashboard() {
     navigate("/report");
   };
 
+  // Search across the case book by applicant/case id or name
+  const q = query.trim().toLowerCase();
+  const results = q
+    ? history.filter(
+        (h) =>
+          (h.case?.applicant_id || "").toLowerCase().includes(q) ||
+          (h.case?.applicant_name || "").toLowerCase().includes(q) ||
+          h.id.toLowerCase().includes(q)
+      )
+    : [];
+
   return (
     <div className="space-y-6">
       {/* Hero */}
@@ -126,6 +138,50 @@ export default function Dashboard() {
           </div>
           <StatusPill ok={health?.model_loaded} loading={loading} labelOk="System Online" labelBad="API Offline" />
         </div>
+      </div>
+
+      {/* Search the case book */}
+      <div className="relative">
+        <div className="card flex items-center gap-3 px-4 py-3">
+          <svg className="h-5 w-5 shrink-0 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.3-4.3m1.3-5.4a6.7 6.7 0 11-13.4 0 6.7 6.7 0 0113.4 0z" />
+          </svg>
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search by Applicant ID, Case ID, or name…"
+            className="w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
+          />
+          {query && (
+            <button onClick={() => setQuery("")} className="text-xs text-slate-500 hover:text-slate-300">Clear</button>
+          )}
+        </div>
+        {q && (
+          <div className="card absolute z-10 mt-2 max-h-72 w-full overflow-y-auto p-2">
+            {results.length === 0 ? (
+              <p className="px-3 py-4 text-center text-sm text-slate-500">No matches for “{query}”.</p>
+            ) : (
+              results.slice(0, 8).map((h) => {
+                const theme = riskTheme(h.prediction.risk_category);
+                return (
+                  <button
+                    key={h.id}
+                    onClick={() => openReport(h.id)}
+                    className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left hover:bg-ink-700"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-slate-100">
+                        {h.case?.applicant_name || "Unnamed"}
+                      </p>
+                      <p className="truncate font-mono text-[11px] text-slate-500">{h.case?.applicant_id || h.id.slice(0, 8)}</p>
+                    </div>
+                    <span className={`shrink-0 text-sm font-bold ${theme.text}`}>{h.prediction.risk_score.toFixed(0)}</span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        )}
       </div>
 
       {error && (

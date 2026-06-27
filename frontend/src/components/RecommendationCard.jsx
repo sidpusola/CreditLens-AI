@@ -7,6 +7,35 @@ const TONE = {
   emerald: { text: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/30", dot: "bg-emerald-400", icon: "M5 13l4 4L19 7" },
 };
 
+// Mini horizontal SHAP bar chart: bar width ∝ |impact| relative to the group's strongest factor.
+function FactorBars({ title, factors, color, titleColor, empty }) {
+  const max = factors.reduce((m, f) => Math.max(m, Math.abs(f.impact)), 0) || 1;
+  return (
+    <div>
+      <p className={`mb-2 flex items-center gap-2 text-xs font-semibold ${titleColor}`}>
+        <span className={`h-1.5 w-1.5 rounded-full ${color}`} /> {title}
+      </p>
+      {factors.length ? (
+        <div className="space-y-2">
+          {factors.map((f, i) => (
+            <div key={i}>
+              <p className="mb-0.5 truncate text-xs text-slate-300">{prettyFeature(f.feature)}</p>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-ink-700">
+                <div
+                  className={`h-full rounded-full ${color}`}
+                  style={{ width: `${Math.max(8, (Math.abs(f.impact) / max) * 100)}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-slate-500">{empty}</p>
+      )}
+    </div>
+  );
+}
+
 function reasonFor(category) {
   if (category === "High Risk") return "Default probability exceeds the high-risk threshold.";
   if (category === "Medium Risk") return "Moderate default probability — manual review advised before approval.";
@@ -49,42 +78,10 @@ export default function RecommendationCard({ prediction, explanation }) {
         <p className="mt-0.5 text-sm text-slate-200">{reasonFor(prediction.risk_category)}</p>
       </div>
 
-      {/* Key drivers + mitigants */}
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <div>
-          <p className="mb-2 flex items-center gap-2 text-xs font-semibold text-rose-400">
-            <span className="h-1.5 w-1.5 rounded-full bg-rose-400" /> Key Drivers
-          </p>
-          <ul className="space-y-1.5">
-            {drivers.length ? (
-              drivers.map((f, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-slate-300">
-                  <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-rose-400/70" />
-                  {prettyFeature(f.feature)}
-                </li>
-              ))
-            ) : (
-              <li className="text-sm text-slate-500">None material</li>
-            )}
-          </ul>
-        </div>
-        <div>
-          <p className="mb-2 flex items-center gap-2 text-xs font-semibold text-emerald-400">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Mitigating Factors
-          </p>
-          <ul className="space-y-1.5">
-            {mitigants.length ? (
-              mitigants.map((f, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-slate-300">
-                  <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-emerald-400/70" />
-                  {prettyFeature(f.feature)}
-                </li>
-              ))
-            ) : (
-              <li className="text-sm text-slate-500">None</li>
-            )}
-          </ul>
-        </div>
+      {/* Key drivers + mitigants — mini SHAP bar charts */}
+      <div className="mt-4 grid gap-5 sm:grid-cols-2">
+        <FactorBars title="Key Drivers" factors={drivers} color="bg-rose-500" titleColor="text-rose-400" empty="None material" />
+        <FactorBars title="Mitigating Factors" factors={mitigants} color="bg-emerald-500" titleColor="text-emerald-400" empty="None" />
       </div>
     </div>
   );
